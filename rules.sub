@@ -1,7 +1,7 @@
 ;; The game snake, without its page: the rules, the timing and the placing of food.
 
 (provide snake cell snake-columns snake-rows
-         snake-waiting snake-playing snake-paused snake-over snake-won
+         snake-state snake-waiting snake-playing snake-paused snake-over snake-won
          snake-up snake-right snake-down snake-left
          snake-reset! snake-turn! snake-toggle-pause! snake-advance! snake-step!
          snake-segment snake-occupied?)
@@ -12,11 +12,7 @@
 
 (struct cell [x i32] [y i32])
 
-(const snake-waiting u32 0)
-(const snake-playing u32 1)
-(const snake-paused u32 2)
-(const snake-over u32 3)
-(const snake-won u32 4)
+(enum snake-state snake-waiting snake-playing snake-paused snake-over snake-won)
 
 ;; Directions, in clockwise order.
 (const snake-up u32 0)
@@ -30,7 +26,7 @@
   [turns (array u32 2)] [turn-count u32]
   [food cell]
   [score u32]
-  [state u32]
+  [state snake-state]
   [random u32]
   [timed bool] [last-time f64] [pending f64])
 
