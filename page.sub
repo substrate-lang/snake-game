@@ -1,0 +1,5 @@
+;; The snake page: the game in the page's root element.
+(require-unqualified web-ui)
+(require-unqualified "snake.sub")
+
+(attach ["root" (snake-game)])

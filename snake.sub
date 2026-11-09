@@ -1,22 +1,38 @@
-;; Snake, as a web page: the page around rules.sub's game.
-(require-unqualified web-ui/web)
+;; Snake as a component: the board, the score and the controls around rules.sub's game.
+(require-unqualified web-ui)
 (require-unqualified std/web/canvas)
 (require-unqualified "rules.sub")
 (require-unqualified host/web/storage)
 
-(struct model
-  [head event-head]
+(provide snake-game)
+
+(struct game-state
   [game snake]
   [best u32]
   [redraw u32]
-  [seeded bool])
+  [seeded bool]
+  [focused bool]
+  [visible bool]
+  [focus u32])
 
 (variant message
   [tick [time f64]]
   [key-pressed [key string]]
   [new-game]
-  [best-kept [best u32]])
-(messages message)
+  [best-kept [best u32]]
+  [focused]
+  [blurred]
+  [seen [visible bool]])
+
+(define style string
+  ".snake { width: 400px; max-width: 100%; box-sizing: border-box; padding: 1rem; border-radius: 8px; background: #0b0e13; color: #d7dde5; font: 15px/1.5 system-ui, sans-serif; }
+.snake .scores { margin: 0 0 0.75rem; color: #8b96a5; white-space: pre; }
+.snake .scores span { color: #d7dde5; font-variant-numeric: tabular-nums; }
+.snake canvas { display: block; width: 100%; height: auto; border-radius: 6px; outline: 1px solid #1f2733; }
+.snake canvas:focus { outline-color: #57ab5a; }
+.snake .status { color: #8b96a5; margin: 0.75rem 0; min-height: 1.5em; }
+.snake button { font: inherit; color: #d7dde5; background: transparent; border: 1px solid #2b3545; border-radius: 4px; padding: 0.25rem 0.8rem; cursor: pointer; }
+.snake button:hover { border-color: #57ab5a; color: #b4f1a7; }")
 
 (define (digits [s string]) -> u32
   (let ([n u32 0] [i u32 0])
@@ -27,31 +43,36 @@
 
 (define (kept [source u32] [kind u32] [id u32] [tag (ptr void)] [value i32])
   (when (and (== kind storage-got) (== value 1))
-    (let* ([text (events-take-text)] [e message (best-kept (digits text))])
-      (free (-> text bytes))
-      (send! (& e)))))
+    (let ([text (events-take-text)])
+      (send! (best-kept (digits text)))
+      (free (-> text bytes)))))
 
-(define (keep-best! [m (ptr model)])
+(define (keep-best! [s (ptr game-state)])
   (let ([text (make-buffer)])
-    (write-digits (& text) (cast u64 (-> m best)) 10)
-    (storage-set-text "best" (buffer-string (& text)) (cast (ptr void) m))
+    (write-digits (& text) (cast u64 (-> s best)) 10)
+    (storage-set-text "best" (buffer-string (& text)) 0)
     (buffer-free! (& text))))
 
-(define (restart! [m (ptr model)] [seed u32])
-  (snake-reset! (& (-> m game)) seed)
-  (+= (-> m redraw) 1))
+(define (restart! [s (ptr game-state)] [seed u32])
+  (snake-reset! (& (-> s game)) seed)
+  (+= (-> s redraw) 1))
 
-(define (next-seed [m (ptr model)]) -> u32 (+ (* (-> m redraw) 2654435761) (-> m game score)))
+(define (next-seed [s (ptr game-state)]) -> u32 (+ (* (-> s redraw) 2654435761) (-> s game score)))
 
-(define (tick! [m (ptr model)] [time f64])
-  (unless (-> m seeded)
-    (set! (-> m seeded) #t)
-    (restart! m (cast u32 (* time 1000.0))))
-  (when (snake-advance! (& (-> m game)) time)
-    (when (> (-> m game score) (-> m best))
-      (set! (-> m best) (-> m game score))
-      (keep-best! m))
-    (+= (-> m redraw) 1)))
+(define (pause! [s (ptr game-state)])
+  (when (== (-> s game state) snake-playing)
+    (snake-toggle-pause! (& (-> s game)))
+    (+= (-> s redraw) 1)))
+
+(define (tick! [s (ptr game-state)] [time f64])
+  (unless (-> s seeded)
+    (set! (-> s seeded) #t)
+    (restart! s (cast u32 (* time 1000.0))))
+  (when (snake-advance! (& (-> s game)) time)
+    (when (> (-> s game score) (-> s best))
+      (set! (-> s best) (-> s game score))
+      (keep-best! s))
+    (+= (-> s redraw) 1)))
 
 (const no-direction u32 4)
 
@@ -62,33 +83,46 @@
         [(or (== key "ArrowLeft") (== key "a") (== key "A")) snake-left]
         [else no-direction]))
 
-(define (key! [m (ptr model)] [key string])
+(define (key! [s (ptr game-state)] [key string])
   (let ([direction (direction-of key)])
     (cond [(!= direction no-direction)
            (prevent-default!)
-           (snake-turn! (& (-> m game)) direction)]
+           (snake-turn! (& (-> s game)) direction)]
           [(== key " ")
            (prevent-default!)
-           (snake-toggle-pause! (& (-> m game)))]
+           (snake-toggle-pause! (& (-> s game)))]
           [(== key "Enter")
            (prevent-default!)
-           (restart! m (next-seed m))])
-    (+= (-> m redraw) 1)))
+           (restart! s (next-seed s))])
+    (+= (-> s redraw) 1)))
 
-(define (update [m (ptr model)] [e (ptr message)])
+(define (update [s (ptr game-state)] [e (ptr message)])
   (match e
-    [(tick time) (tick! m time)]
-    [(key-pressed key) (key! m key)]
-    [new-game (restart! m (next-seed m))]
-    [(best-kept best) (set! (-> m best) best)]))
+    [(tick time) (tick! s time)]
+    [(key-pressed key) (key! s key)]
+    [new-game
+     (restart! s (next-seed s))
+     (+= (-> s focus) 1)]
+    [(best-kept best) (set! (-> s best) best)]
+    [focused (set! (-> s focused) #t)]
+    [blurred
+     (set! (-> s focused) #f)
+     (pause! s)]
+    [(seen visible)
+     (set! (-> s visible) visible)
+     (unless visible (pause! s))]))
 
-(define (init [m (ptr model)])
-  (set! (-> m head handle) kept)
-  (storage-get "best" (cast (ptr void) m))
-  (restart! m 1))
+(define (init [s (ptr game-state)])
+  (set! (-> s visible) #t)
+  (storage-get "best" (request! kept))
+  (restart! s 1))
 
-(define (draw-game [m (ptr model)])
-  (let* ([g (& (-> m game))] [state (-> g state)])
+;; Frames come only to seed the game, and while it is played and on screen.
+(define (ticking? [s (ptr game-state)]) -> bool
+  (and (-> s visible) (or (not (-> s seeded)) (== (-> s game state) snake-playing))))
+
+(define (draw-game [s (ptr game-state)])
+  (let* ([g (& (-> s game))] [state (-> g state)])
     (canvas-fill-style! "#10141a")
     (canvas-fill-rect! 0 0 400 400)
 
@@ -109,25 +143,28 @@
       (canvas-fill-rect! 0 0 400 400)
       (canvas-global-alpha! 1))))
 
-(define (status [m (ptr model)]) -> string
-  (let ([state (-> m game state)])
-    (cond [(== state snake-waiting) "Press an arrow key to start."]
+(define (status [s (ptr game-state)]) -> string
+  (let ([state (-> s game state)])
+    (cond [(not (-> s focused)) "Click the board to play."]
+          [(== state snake-waiting) "Press an arrow key to start."]
           [(== state snake-paused) "Paused. Press Space to continue."]
           [(== state snake-over) "Game over. Press Enter to play again."]
           [(== state snake-won) "You filled the board! Press Enter to play again."]
           [else "Arrow keys or W A S D to turn. Space to pause."])))
 
-(view (page [m (ptr model)])
+(component (snake-game)
+  #:state [s game-state]
+  #:messages message
+  #:update update
+  #:init init
+  #:style style
   (div ([class "snake"])
-    (header
-      (h1 "snake")
-      (p "Score " (span ([id "score"]) (int (-> m game score)))
-         "  Best " (span ([id "best"]) (int (-> m best)))))
-    (canvas ([id "board"] [width 400] [height 400]
-             [on-window frame (tick (event time))]
-             [on-window keydown (key-pressed (event key))]
-             [draw (-> m redraw) (draw-game m)]))
-    (p ([id "status"]) (text (status m)))
-    (button ([id "new-game"] [on click new-game]) "New game")))
-
-(app model message init update page)
+    (p ([class "scores"]) "Score " (span ([class "score"]) (int (-> s game score)))
+       "  Best " (span ([class "best"]) (int (-> s best))))
+    (canvas ([class "board"] [width 400] [height 400] [tabindex 0] [focus (-> s focus)]
+             [on keydown (key-pressed (event key))] [on focus focused] [on blur blurred]
+             [on visibility (seen (event visible))]
+             [draw (-> s redraw) (draw-game s)]))
+    (when (ticking? s) (span ([hidden] [on-window frame (tick (event time))])))
+    (p ([class "status"]) (text (status s)))
+    (button ([on click new-game]) "New game")))

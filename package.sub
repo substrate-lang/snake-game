@@ -4,4 +4,4 @@
   (exports rules)
   (dependencies (web-ui (path "../substrate-web-ui")))
   (tests (browser))
-  (sites (snake "snake.sub" (html "index.html"))))
+  (sites (snake "page.sub" (html "index.html"))))
