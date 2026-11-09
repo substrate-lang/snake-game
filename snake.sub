@@ -1,9 +1,8 @@
 ;; Snake, as a web page: the page around rules.sub's game.
-(require-unqualified "../../web.sub")
+(require-unqualified web-ui/web)
 (require-unqualified std/web/canvas)
 (require-unqualified "rules.sub")
 (require-unqualified host/web/storage)
-(require-unqualified "../../game/format.sub")
 
 (struct model
   [head event-head]
@@ -33,8 +32,10 @@
       (send! (& e)))))
 
 (define (keep-best! [m (ptr model)])
-  (let ([text (array u8 16)])
-    (storage-set-text "best" (format-into (slice text) "~d" (cast i32 (-> m best))) (cast (ptr void) m))))
+  (let ([text (make-buffer)])
+    (write-digits (& text) (cast u64 (-> m best)) 10)
+    (storage-set-text "best" (buffer-string (& text)) (cast (ptr void) m))
+    (buffer-free! (& text))))
 
 (define (restart! [m (ptr model)] [seed u32])
   (snake-reset! (& (-> m game)) seed)

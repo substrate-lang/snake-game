@@ -1,0 +1,7 @@
+(package snake
+  (version "0.10.0")
+  (substrate "0.10.0")
+  (exports rules)
+  (dependencies (web-ui (path "../substrate-web-ui")))
+  (tests (browser))
+  (sites (snake "snake.sub" (html "index.html"))))
