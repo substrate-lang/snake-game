@@ -117,7 +117,6 @@
   (storage-get "best" (request! kept))
   (restart! s 1))
 
-;; Frames come only to seed the game, and while it is played and on screen.
 (define (ticking? [s (ptr game-state)]) -> bool
   (and (-> s visible) (or (not (-> s seeded)) (== (-> s game state) snake-playing))))
 
