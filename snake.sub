@@ -25,14 +25,14 @@
   [seen [visible bool]])
 
 (define style string
-  ".snake { width: 400px; max-width: 100%; box-sizing: border-box; padding: 1rem; border-radius: 8px; background: #0b0e13; color: #d7dde5; font: 15px/1.5 system-ui, sans-serif; }
-.snake .scores { margin: 0 0 0.75rem; color: #8b96a5; white-space: pre; }
-.snake .scores span { color: #d7dde5; font-variant-numeric: tabular-nums; }
-.snake canvas { display: block; width: 100%; height: auto; border-radius: 6px; outline: 1px solid #1f2733; }
-.snake canvas:focus { outline-color: #57ab5a; }
-.snake .status { color: #8b96a5; margin: 0.75rem 0; min-height: 1.5em; }
-.snake button { font: inherit; color: #d7dde5; background: transparent; border: 1px solid #2b3545; border-radius: 4px; padding: 0.25rem 0.8rem; cursor: pointer; }
-.snake button:hover { border-color: #57ab5a; color: #b4f1a7; }")
+  ".snake { width: 400px; max-width: 100%; box-sizing: border-box; padding: 1rem; border-radius: 8px; background: #0a0d0b; color: #dce6de; font: 15px/1.5 system-ui, sans-serif; }
+.snake .scores { margin: 0 0 0.75rem; color: #95a49a; white-space: pre; }
+.snake .scores span { color: #dce6de; font-variant-numeric: tabular-nums; }
+.snake canvas { display: block; width: 100%; height: auto; border-radius: 6px; outline: 1px solid #2b372f; }
+.snake canvas:focus { outline-color: #4ade80; }
+.snake .status { color: #95a49a; margin: 0.75rem 0; min-height: 1.5em; }
+.snake button { font: inherit; color: #dce6de; background: transparent; border: 1px solid #2b372f; border-radius: 4px; padding: 0.25rem 0.8rem; cursor: pointer; }
+.snake button:hover { border-color: #4ade80; color: #4ade80; }")
 
 (define (digits [s string]) -> u32
   (let ([n u32 0] [i u32 0])
@@ -122,23 +122,23 @@
 
 (define (draw-game [s (ptr game-state)])
   (let* ([g (& (-> s game))] [state (-> g state)])
-    (canvas-fill-style! "#10141a")
+    (canvas-fill-style! "#0e1310")
     (canvas-fill-rect! 0 0 400 400)
 
-    (canvas-fill-style! "#e5534b")
+    (canvas-fill-style! "#f87171")
     (canvas-fill-circle! (+ (* (-> g food x) 20) 10) (+ (* (-> g food y) 20) 10) 7)
 
-    (canvas-fill-style! "#57ab5a")
+    (canvas-fill-style! "#4ade80")
     (for ([i u32 1]) (< i (-> g length)) (+= i 1)
       (let ([c (snake-segment g i)])
         (canvas-fill-rect! (+ (* (-> c x) 20) 1) (+ (* (-> c y) 20) 1) 18 18)))
     (let ([head (snake-segment g 0)])
-      (canvas-fill-style! "#b4f1a7")
+      (canvas-fill-style! "#bbf7d0")
       (canvas-fill-rect! (+ (* (-> head x) 20) 1) (+ (* (-> head y) 20) 1) 18 18))
 
     (when (or (== state snake-paused) (== state snake-over) (== state snake-won))
       (canvas-global-alpha! 0.55)
-      (canvas-fill-style! "#10141a")
+      (canvas-fill-style! "#0e1310")
       (canvas-fill-rect! 0 0 400 400)
       (canvas-global-alpha! 1))))
 
