@@ -1,5 +1,5 @@
 (package snake
-  (version "0.11.0")
+  (version "0.11.1")
   (substrate "0.11.0")
   (exports rules snake)
   (dependencies (web-ui (url "https://github.com/substrate-lang/web-ui/archive/refs/tags/v0.11.0.tar.gz")
