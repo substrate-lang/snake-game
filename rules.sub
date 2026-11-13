@@ -3,7 +3,7 @@
 (provide snake cell snake-columns snake-rows
          snake-state snake-waiting snake-playing snake-paused snake-over snake-won
          snake-up snake-right snake-down snake-left
-         snake-reset! snake-turn! snake-toggle-pause! snake-advance! snake-step!
+         snake-reset! snake-turn! snake-toward snake-toggle-pause! snake-advance! snake-step!
          snake-segment snake-occupied?)
 
 ;; A snake is at most 400 cells long, the size of the body array.
@@ -107,6 +107,15 @@
        (when (and (< (-> s turn-count) 2) (!= direction heading) (!= direction (opposite heading)))
          (set! (@ (-> s turns) (-> s turn-count)) direction)
          (+= (-> s turn-count) 1)))]))
+
+;; The direction from the head toward the point x, y, in cells, along the axis on which the point is further away.
+(define (snake-toward [s (ptr snake)] [x f64] [y f64]) -> u32
+  (let* ([head (snake-segment s 0)]
+         [across (- x (+ (cast f64 (-> head x)) 0.5))]
+         [down (- y (+ (cast f64 (-> head y)) 0.5))])
+    (if (> (* across across) (* down down))
+        (if (> across 0.0) snake-right snake-left)
+        (if (> down 0.0) snake-down snake-up))))
 
 (define (snake-toggle-pause! [s (ptr snake)])
   (cond [(== (-> s state) snake-playing) (set! (-> s state) snake-paused)]

@@ -1,4 +1,4 @@
-;; Snake without a browser: a scripted game with a fixed seed and made-up times.
+;; Snake without a browser: a scripted game with a fixed seed and made-up times, and the direction toward a point.
 (require-unqualified std/test/test)
 (require-unqualified snake/rules)
 
@@ -159,3 +159,12 @@
   (frame 20390.0))
 
 (test snake (expect-output-file "snake.out" (main)))
+
+(test toward
+  (let ([s snake])
+    (snake-reset! (& s) 1)
+    (let* ([head (snake-segment (& s) 0)] [x (+ (cast f64 (-> head x)) 0.5)] [y (+ (cast f64 (-> head y)) 0.5)])
+      (expect-equal (snake-toward (& s) (+ x 4.0) (- y 1.0)) snake-right)
+      (expect-equal (snake-toward (& s) (- x 4.0) (+ y 1.0)) snake-left)
+      (expect-equal (snake-toward (& s) (+ x 1.0) (- y 4.0)) snake-up)
+      (expect-equal (snake-toward (& s) (- x 1.0) (+ y 4.0)) snake-down))))
