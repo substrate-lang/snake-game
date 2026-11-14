@@ -125,8 +125,9 @@
 
 (define (init [s (ptr game-state)])
   (set! (-> s visible) #t)
-  (storage-get "best" (request! kept))
   (restart! s 1))
+
+(define (start [s (ptr game-state)]) (storage-get "best" (request! kept)))
 
 (define (ticking? [s (ptr game-state)]) -> bool
   (and (-> s visible) (or (not (-> s seeded)) (== (-> s game state) snake-playing))))
@@ -172,6 +173,7 @@
   #:messages message
   #:update update
   #:init init
+  #:start start
   #:style style
   (div ([class "snake"])
     (p ([class "scores"]) "Score " (span ([class "score"]) (int (-> s game score)))
