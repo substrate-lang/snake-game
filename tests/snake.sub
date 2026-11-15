@@ -8,10 +8,10 @@
 
 (define (status)
   (let ([state (-> game state)])
-    (printf "~a" (cond [(== state snake-waiting) "waiting"]
-                       [(== state snake-playing) "playing"]
-                       [(== state snake-paused) "paused"]
-                       [(== state snake-over) "over"]
+    (printf "~a" (cond [(== state .waiting) "waiting"]
+                       [(== state .playing) "playing"]
+                       [(== state .paused) "paused"]
+                       [(== state .over) "over"]
                        [else "won"])))
   (printf ", score ")
   (number (-> game score))
@@ -44,7 +44,7 @@
 
 (define (eat!)
   (let ([target (-> game score)])
-    (while (and (== (-> game score) target) (== (-> game state) snake-playing))
+    (while (and (== (-> game score) target) (== (-> game state) .playing))
       (let* ([head (snake-segment (& game) 0)] [d (-> game direction)]
              [want (cond [(< (-> game food y) (-> head y)) snake-up]
                          [(> (-> game food y) (-> head y)) snake-down]

@@ -46,7 +46,7 @@
 (define (kept [source u32] [kind u32] [id u32] [tag (ptr void)] [value i32])
   (when (and (== kind storage-got) (== value 1))
     (let ([text (events-take-text)])
-      (send! (best-kept (digits text)))
+      (send! (message .best-kept (digits text)))
       (free (-> text bytes)))))
 
 (define (keep-best! [s (ptr game-state)])
@@ -62,7 +62,7 @@
 (define (next-seed [s (ptr game-state)]) -> u32 (+ (* (-> s redraw) 2654435761) (-> s game score)))
 
 (define (pause! [s (ptr game-state)])
-  (when (== (-> s game state) snake-playing)
+  (when (== (-> s game state) .playing)
     (snake-toggle-pause! (& (-> s game)))
     (+= (-> s redraw) 1)))
 
@@ -101,25 +101,25 @@
 (define (tap! [s (ptr game-state)] [x f64] [y f64] [width f64])
   (let ([g (& (-> s game))] [cells (/ 20.0 width)])
     (set! (-> s touched) #t)
-    (if (== (-> g state) snake-paused)
+    (if (== (-> g state) .paused)
         (snake-toggle-pause! g)
         (snake-turn! g (snake-toward g (* x cells) (* y cells))))
     (+= (-> s redraw) 1)))
 
 (define (update [s (ptr game-state)] [e (ptr message)])
   (match e
-    [(tick time) (tick! s time)]
-    [(key-pressed key) (key! s key)]
-    [(tapped kind x y width) (unless (== kind "mouse") (tap! s x y width))]
-    [new-game
+    [(.tick time) (tick! s time)]
+    [(.key-pressed key) (key! s key)]
+    [(.tapped kind x y width) (unless (== kind "mouse") (tap! s x y width))]
+    [.new-game
      (restart! s (next-seed s))
      (+= (-> s focus) 1)]
-    [(best-kept best) (set! (-> s best) best)]
-    [focused (set! (-> s focused) #t)]
-    [blurred
+    [(.best-kept best) (set! (-> s best) best)]
+    [.focused (set! (-> s focused) #t)]
+    [.blurred
      (set! (-> s focused) #f)
      (pause! s)]
-    [(seen visible)
+    [(.seen visible)
      (set! (-> s visible) visible)
      (unless visible (pause! s))]))
 
@@ -130,7 +130,7 @@
 (define (start [s (ptr game-state)]) (storage-get "best" (request! kept)))
 
 (define (ticking? [s (ptr game-state)]) -> bool
-  (and (-> s visible) (or (not (-> s seeded)) (== (-> s game state) snake-playing))))
+  (and (-> s visible) (or (not (-> s seeded)) (== (-> s game state) .playing))))
 
 (define (draw-game [s (ptr game-state)])
   (let* ([g (& (-> s game))] [state (-> g state)])
@@ -148,7 +148,7 @@
       (canvas-fill-style! "#bbf7d0")
       (canvas-fill-rect! (+ (* (-> head x) 20) 1) (+ (* (-> head y) 20) 1) 18 18))
 
-    (when (or (== state snake-paused) (== state snake-over) (== state snake-won))
+    (when (or (== state .paused) (== state .over) (== state .won))
       (canvas-global-alpha! 0.55)
       (canvas-fill-style! "#0e1310")
       (canvas-fill-rect! 0 0 400 400)
@@ -156,16 +156,16 @@
 
 (define (status [s (ptr game-state)]) -> string
   (let ([state (-> s game state)])
-    (cond [(and (-> s touched) (== state snake-waiting)) "Tap the board to start."]
-          [(and (-> s touched) (== state snake-paused)) "Paused. Tap the board to continue."]
-          [(and (-> s touched) (== state snake-over)) "Game over. Tap New game to play again."]
-          [(and (-> s touched) (== state snake-won)) "You filled the board! Tap New game to play again."]
+    (cond [(and (-> s touched) (== state .waiting)) "Tap the board to start."]
+          [(and (-> s touched) (== state .paused)) "Paused. Tap the board to continue."]
+          [(and (-> s touched) (== state .over)) "Game over. Tap New game to play again."]
+          [(and (-> s touched) (== state .won)) "You filled the board! Tap New game to play again."]
           [(-> s touched) "Tap beside the snake to turn."]
           [(not (-> s focused)) "Click the board to play."]
-          [(== state snake-waiting) "Press an arrow key to start."]
-          [(== state snake-paused) "Paused. Press Space to continue."]
-          [(== state snake-over) "Game over. Press Enter to play again."]
-          [(== state snake-won) "You filled the board! Press Enter to play again."]
+          [(== state .waiting) "Press an arrow key to start."]
+          [(== state .paused) "Paused. Press Space to continue."]
+          [(== state .over) "Game over. Press Enter to play again."]
+          [(== state .won) "You filled the board! Press Enter to play again."]
           [else "Arrow keys or W A S D to turn. Space to pause."])))
 
 (component (snake-game)
@@ -179,11 +179,11 @@
     (p ([class "scores"]) "Score " (span ([class "score"]) (int (-> s game score)))
        "  Best " (span ([class "best"]) (int (-> s best))))
     (canvas ([class "board"] [width 400] [height 400] [tabindex 0] [focus (-> s focus)]
-             [on keydown (key-pressed (event key))] [on focus focused] [on blur blurred]
-             [on pointerdown (tapped (event-text "pointerType") (event-number "offsetX") (event-number "offsetY")
+             [on keydown (.key-pressed (event key))] [on focus .focused] [on blur .blurred]
+             [on pointerdown (.tapped (event-text "pointerType") (event-number "offsetX") (event-number "offsetY")
                                      (event-number "target.clientWidth"))]
-             [on visibility (seen (event visible))]
+             [on visibility (.seen (event visible))]
              [draw (-> s redraw) (draw-game s)]))
-    (when (ticking? s) (span ([hidden] [on-window frame (tick (event time))])))
+    (when (ticking? s) (span ([hidden] [on-window frame (.tick (event time))])))
     (p ([class "status"]) (text (status s)))
-    (button ([on click new-game]) "New game")))
+    (button ([on click .new-game]) "New game")))
