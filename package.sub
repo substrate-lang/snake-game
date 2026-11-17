@@ -1,9 +1,9 @@
 (package snake
-  (version "0.12.0")
-  (substrate "0.12.0")
+  (version "0.13.0")
+  (substrate "0.13.0")
   (exports rules snake)
-  (dependencies (web-ui (url "https://github.com/substrate-lang/web-ui/archive/refs/tags/v0.12.0.tar.gz")
-                        (hash "sha256:51f1067956c3b65e68ed26af4529f0d14cd89fbf5c43181b69fe5f32eb76c1b9")))
+  (dependencies (web-ui (url "https://github.com/substrate-lang/web-ui/archive/refs/tags/v0.13.0.tar.gz")
+                        (hash "sha256:d6e48adebcee50950fdb97c94915283c6d99129aa5c556a22ae4528bf26d5c12")))
   (sites (snake "page.sub" (html "index.html")))
   (tests "tests/*.sub")
   (dev-dependencies (chromium)))

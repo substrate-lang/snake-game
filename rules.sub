@@ -1,7 +1,6 @@
 ;; The game snake, without its page: the rules, the timing and the placing of food.
 
-(provide snake cell snake-columns snake-rows
-         snake-state snake-waiting snake-playing snake-paused snake-over snake-won
+(provide snake cell snake-columns snake-rows snake-state
          snake-up snake-right snake-down snake-left
          snake-reset! snake-turn! snake-toward snake-toggle-pause! snake-advance! snake-step!
          snake-segment snake-occupied?)
@@ -12,7 +11,7 @@
 
 (struct cell [x i32] [y i32])
 
-(enum snake-state snake-waiting snake-playing snake-paused snake-over snake-won)
+(enum snake-state waiting playing paused over won)
 
 ;; Directions, in clockwise order.
 (const snake-up u32 0)
@@ -91,18 +90,18 @@
   (set! (-> s direction) snake-right)
   (set! (-> s turn-count) 0)
   (set! (-> s score) 0)
-  (set! (-> s state) snake-waiting)
+  (set! (-> s state) .waiting)
   (set! (-> s timed) #f)
   (set! (-> s random) (if (== seed 0) 2654435769 seed))
   (place-food! s))
 
 (define (snake-turn! [s (ptr snake)] [direction u32])
   (cond
-    [(== (-> s state) snake-waiting)
+    [(== (-> s state) .waiting)
      (when (== direction (opposite (-> s direction))) (reverse! s))
      (set! (-> s direction) direction)
-     (set! (-> s state) snake-playing)]
-    [(== (-> s state) snake-playing)
+     (set! (-> s state) .playing)]
+    [(== (-> s state) .playing)
      (let ([heading (if (> (-> s turn-count) 0) (@ (-> s turns) (- (-> s turn-count) 1)) (-> s direction))])
        (when (and (< (-> s turn-count) 2) (!= direction heading) (!= direction (opposite heading)))
          (set! (@ (-> s turns) (-> s turn-count)) direction)
@@ -118,11 +117,11 @@
         (if (> down 0.0) snake-down snake-up))))
 
 (define (snake-toggle-pause! [s (ptr snake)])
-  (cond [(== (-> s state) snake-playing) (set! (-> s state) snake-paused)]
-        [(== (-> s state) snake-paused) (set! (-> s state) snake-playing)]))
+  (cond [(== (-> s state) .playing) (set! (-> s state) .paused)]
+        [(== (-> s state) .paused) (set! (-> s state) .playing)]))
 
 (define (snake-step! [s (ptr snake)])
-  (when (== (-> s state) snake-playing)
+  (when (== (-> s state) .playing)
     (when (> (-> s turn-count) 0)
       (set! (-> s direction) (@ (-> s turns) 0))
       (set! (@ (-> s turns) 0) (@ (-> s turns) 1))
@@ -132,8 +131,8 @@
            [y (+ (-> head y) (dy (-> s direction)))]
            [eats (and (== x (-> s food x)) (== y (-> s food y)))])
       (cond
-        [(or (< x 0) (>= x snake-columns) (< y 0) (>= y snake-rows)) (set! (-> s state) snake-over)]
-        [(covers? s x y (if eats (-> s length) (- (-> s length) 1))) (set! (-> s state) snake-over)]
+        [(or (< x 0) (>= x snake-columns) (< y 0) (>= y snake-rows)) (set! (-> s state) .over)]
+        [(covers? s x y (if eats (-> s length) (- (-> s length) 1))) (set! (-> s state) .over)]
         [else
          (set! (-> s head) (% (+ (-> s head) 1) 400))
          (let ([new (snake-segment s 0)])
@@ -143,7 +142,7 @@
            (+= (-> s length) 1)
            (+= (-> s score) 1)
            (if (== (-> s length) 400)
-               (set! (-> s state) snake-won)
+               (set! (-> s state) .won)
                (place-food! s)))]))))
 
 (define (step-length [score u32]) -> f64
@@ -154,7 +153,7 @@
 
 (define (snake-advance! [s (ptr snake)] [now f64]) -> bool
   (cond
-    [(!= (-> s state) snake-playing)
+    [(!= (-> s state) .playing)
      (set! (-> s timed) #f)
      #f]
     [(not (-> s timed))
@@ -166,7 +165,7 @@
      (let ([steps u32 0])
        (+= (-> s pending) (- now (-> s last-time)))
        (set! (-> s last-time) now)
-       (while (and (== (-> s state) snake-playing) (< steps max-steps)
+       (while (and (== (-> s state) .playing) (< steps max-steps)
                    (>= (-> s pending) (step-length (-> s score))))
          (-= (-> s pending) (step-length (-> s score)))
          (snake-step! s)
